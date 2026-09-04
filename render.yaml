@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: ai-creator-decision
+    runtime: python
+    plan: free
+    buildCommand: ""
+    startCommand: "python3 server.py"
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: OPENBOOST_API_KEY
+        sync: false  # 在 Render 后台手动填入，或保留为空让用户在前端设置页填
+    healthCheckPath: /

@@ -1,0 +1,4 @@
+# AI 达人决策引擎 — Python 标准库实现
+# 仅使用 http.server / urllib / smtplib / email，零第三方依赖。
+# Render / Railway / Fly.io 等平台仍会尝试执行 pip install，
+# 这里留一个空文件让部署日志里不会报错。

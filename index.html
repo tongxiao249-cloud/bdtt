@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CreatorDecision · AI 达人决策引擎</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+</head>
+<body>
+  <div class="app">
+    <!-- ============ Sidebar ============ -->
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">CD</div>
+        <div>
+          <div class="brand-title">CreatorDecision</div>
+          <div class="brand-sub">AI 达人决策引擎</div>
+        </div>
+      </div>
+
+      <button class="create-btn" data-nav="outreach">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12h14"/></svg>
+        <span>新建建联</span>
+      </button>
+
+      <div class="nav-section-title">工作区</div>
+      <nav class="nav-group">
+        <a href="#" class="nav-item" data-nav="home">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><polyline points="9 22 9 12 15 12 15 22"/></svg>
+          <span>首页</span>
+        </a>
+        <a href="#" class="nav-item" data-nav="creators">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          <span>达人池</span>
+        </a>
+        <a href="#" class="nav-item" data-nav="outreach">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+          <span>建联工作台</span>
+          <span class="nav-badge" id="navOutreachBadge" style="display:none">0</span>
+        </a>
+        <a href="#" class="nav-item" data-nav="performance">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+          <span>效果分析</span>
+        </a>
+        <a href="#" class="nav-item" data-nav="insights">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+          <span>AI 洞察</span>
+        </a>
+      </nav>
+
+      <div class="sidebar-footer">
+        <button class="upgrade-btn" data-nav="settings">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          <span>设置</span>
+        </button>
+        <div class="user-card">
+          <div class="user-avatar">U</div>
+          <div class="user-meta">
+            <div class="user-name">我</div>
+            <div class="user-plan">免费版</div>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- ============ Main ============ -->
+    <main class="main">
+      <header class="topbar">
+        <div class="breadcrumb">
+          <span>CreatorDecision</span>
+          <span class="sep">/</span>
+          <span class="current" id="breadcrumbCurrent">首页</span>
+        </div>
+        <div class="topbar-actions">
+          <button class="icon-btn" id="topbarShare" title="分享">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          </button>
+          <button class="icon-btn" id="topbarSettings" title="设置">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          </button>
+          <button class="save-btn" id="topbarSave">保存</button>
+        </div>
+      </header>
+
+      <!-- ============ View: Home ============ -->
+      <section class="view active" id="view-home">
+        <div class="view-head">
+          <div>
+            <h1>建联概览</h1>
+            <p class="sub">这是你今天达人建联的决策概览。</p>
+          </div>
+          <div class="view-head-actions">
+            <button class="primary-btn" id="openAnalyzerHome">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-2px;margin-right:5px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>AI 分析达人
+            </button>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">达人池</div>
+            <div class="kpi-value" id="kpiPool">5</div>
+            <div class="kpi-delta up" id="kpiPoolDelta">本周 +2</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">已选建联达人</div>
+            <div class="kpi-value" id="kpiSelected">0</div>
+            <div class="kpi-delta" id="kpiSelectedDelta">待建联</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">已发邮件</div>
+            <div class="kpi-value" id="kpiSent">0</div>
+            <div class="kpi-delta" id="kpiSentDelta">本次会话</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">预估月 GMV</div>
+            <div class="kpi-value" id="kpiGmv">$223K</div>
+            <div class="kpi-delta up" id="kpiGmvDelta">全部达人合计</div>
+          </div>
+        </div>
+
+        <div class="workspace">
+          <div class="center-panel">
+            <section class="card chart-card">
+              <div class="chart-header">
+                <div>
+                  <span class="card-title">决策优先级评分</span>
+                  <span class="chart-subtitle">综合带货力 · 受众契合 · 效率 · 增长 · 状态自动打分</span>
+                </div>
+                <div class="score-legend" id="scoreLegend"></div>
+              </div>
+              <div id="mainChart" style="width:100%;height:340px;"></div>
+            </section>
+
+            <section class="card table-card">
+              <div class="table-toolbar">
+                <div class="search-box">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input type="text" id="homeSearch" placeholder="搜索达人，回车查询新达人...">
+                </div>
+                <div class="table-actions">
+                  <button class="export-btn" id="exportCSV">导出 CSV</button>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>达人</th>
+                      <th>类型</th>
+                      <th>类目</th>
+                      <th class="num">粉丝</th>
+                      <th class="num">30天 GMV</th>
+                      <th class="num">GPM</th>
+                      <th>状态</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody id="homeTable"></tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ View: Creator Pool ============ -->
+      <section class="view" id="view-creators">
+        <div class="view-head">
+          <div>
+            <h1>达人池</h1>
+            <p class="sub">勾选达人，发起一次建联。</p>
+          </div>
+          <div class="view-head-actions">
+            <button class="secondary-btn" id="openBatchImport">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-2px;margin-right:5px"><path d="M12 5v14M5 12h14"/></svg>批量导入
+            </button>
+            <button class="secondary-btn" id="openAnalyzerPool">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" style="vertical-align:-2px;margin-right:5px"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>AI 分析达人
+            </button>
+            <button class="primary-btn" id="poolGenerate">生成邮件 <span id="poolGenerateCount"></span></button>
+          </div>
+        </div>
+
+        <div class="filter-bar">
+          <div class="search-box grow pool-search-box">
+            <svg class="search-ico" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" id="poolSearch" placeholder="输入 @handle 搜索达人（如 khaby.lame）">
+            <button class="search-btn" id="poolSearchBtn">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              搜索
+            </button>
+          </div>
+          <div class="segment-filter" id="poolSegments"></div>
+        </div>
+
+        <div class="bulk-bar" id="bulkBar" style="display:none">
+          <span>已选 <strong id="bulkCount">0</strong> 位</span>
+          <div class="bulk-actions">
+            <button class="secondary-btn" id="bulkClear">清空</button>
+            <button class="primary-btn" id="bulkGenerate">生成邮件</button>
+          </div>
+        </div>
+
+        <div class="card table-card">
+          <div class="table-wrap">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th class="check-col"><input type="checkbox" id="poolSelectAll"></th>
+                  <th>达人</th>
+                  <th>类型</th>
+                  <th>类目</th>
+                  <th class="num sortable" data-sort="fans" title="点击按粉丝排序">粉丝 <span class="sort-arrow"></span></th>
+                  <th class="num sortable" data-sort="gmv" title="点击按 GMV 排序">30天 GMV <span class="sort-arrow"></span></th>
+                  <th class="num">销量</th>
+                  <th class="num">GPM</th>
+                  <th class="num sortable" data-sort="score" title="点击按评分排序">评分 <span class="sort-arrow"></span></th>
+                  <th>联系方式</th>
+                  <th>状态</th>
+                  <th>回复备注 <span style="font-weight:400;color:var(--text-3);font-size:11px">（点击编辑）</span></th>
+                  <th></th>
+                </tr>
+              </thead>
+              <tbody id="poolTable"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ View: Outreach ============ -->
+      <section class="view" id="view-outreach">
+        <div class="view-head">
+          <div>
+            <h1>建联工作台</h1>
+            <p class="sub">左列选达人，中间编辑文案，右侧查看数据画像。</p>
+          </div>
+          <div class="view-head-actions">
+            <div class="send-progress" id="sendProgress" style="display:none">
+              <span id="sendProgressText">发送中…</span>
+              <div class="progress-track"><div class="progress-fill" id="sendProgressFill"></div></div>
+            </div>
+            <button class="secondary-btn" id="outreachClear">清空列表</button>
+            <button class="primary-btn" id="outreachSendAll">发送给 <span id="outreachSendCount">0</span> 人</button>
+          </div>
+        </div>
+
+        <div class="outreach-workspace" id="outreachWorkspace">
+          <!-- 左侧：达人列表 -->
+          <aside class="outreach-list card" id="outreachList">
+            <div class="outreach-list-head">
+              <span>待建联达人</span>
+              <button class="text-btn" data-nav="creators">+ 添加</button>
+            </div>
+            <div class="recipient-list" id="recipientList"></div>
+            <div class="recipients-empty" id="recipientsEmpty">
+              <div class="empty-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+              </div>
+              <p>尚未选择达人。</p>
+              <button class="secondary-btn" data-nav="creators">去达人池选择</button>
+            </div>
+          </aside>
+
+          <!-- 中间：文案编辑器 -->
+          <div class="outreach-stage card" id="outreachStage">
+            <div class="composer-empty" id="composerEmpty">
+              <div class="empty-icon">
+                <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4 20-7z"/></svg>
+              </div>
+              <h3>选择达人生成文案</h3>
+              <p>从左侧列表点击达人，AI 会为每位达人写一封个性化开场。</p>
+            </div>
+
+            <div class="composer-form" id="composerForm" style="display:none">
+              <div class="composer-toolbar">
+                <div class="composer-tabs">
+                  <button class="tab active" data-channel="email">邮件</button>
+                  <button class="tab" data-channel="whatsapp">WhatsApp</button>
+                  <button class="tab" data-channel="dm">TikTok 私信</button>
+                </div>
+                <div class="composer-actions">
+                  <div class="tone-select">
+                    <span>语气</span>
+                    <div class="segmented" id="toneSelect">
+                      <button data-tone="casual" class="active">轻松</button>
+                      <button data-tone="direct">直接</button>
+                      <button data-tone="warm">温暖</button>
+                    </div>
+                  </div>
+                  <button class="icon-btn" id="regeneratePitch" title="用 AI 重新生成">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-2.64-6.36"/><path d="M21 3v6h-6"/></svg>
+                  </button>
+                </div>
+              </div>
+
+              <div class="composer-to">
+                <div class="c-avatar" id="composerAvatar">R</div>
+                <div>
+                  <div class="c-name" id="composerName">Rafa</div>
+                  <div class="c-handle" id="composerHandle">@rafadealss</div>
+                </div>
+                <span class="channel-tag" id="composerChannelTag">邮件</span>
+              </div>
+
+              <div class="field" id="whatsappField" style="display:none">
+                <label>WhatsApp 号码 <span class="field-note">（含国家码，如 15551234567）</span></label>
+                <input type="text" id="composerWhatsapp" placeholder="15551234567">
+              </div>
+              <div class="field" id="subjectField">
+                <label>主题</label>
+                <input type="text" id="composerSubject">
+              </div>
+              <div class="field">
+                <label>正文</label>
+                <textarea id="composerBody" rows="12"></textarea>
+              </div>
+
+              <div class="composer-footer">
+                <span class="composer-hint" id="composerHint"></span>
+                <div class="composer-footer-actions">
+                  <button class="secondary-btn" id="composerCopy">复制</button>
+                  <button class="primary-btn" id="composerSend">发送给 <span id="composerSendName">Rafa</span></button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 右侧：达人数据面板 -->
+          <aside class="outreach-detail card" id="outreachDetail" style="display:none">
+            <div class="detail-head">
+              <span>达人画像</span>
+              <span class="data-source-badge" id="detailSource">示例数据</span>
+            </div>
+            <div class="detail-body" id="detailBody"></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ============ View: Performance ============ -->
+      <section class="view" id="view-performance">
+        <div class="view-head">
+          <div>
+            <h1>效果分析</h1>
+            <p class="sub">追踪建联与达人转化。</p>
+          </div>
+        </div>
+        <div class="perf-grid">
+          <section class="card chart-card">
+            <div class="chart-header"><span class="card-title">各达人 GMV</span></div>
+            <div id="perfChart" style="width:100%;height:320px;"></div>
+          </section>
+          <section class="card funnel-card">
+            <div class="chart-header"><span class="card-title">建联转化漏斗</span></div>
+            <div class="funnel" id="funnelList"></div>
+          </section>
+        </div>
+        <section class="card replies-card" style="margin-top:18px">
+          <div class="chart-header">
+            <span class="card-title">达人回复记录</span>
+            <span class="card-sub">已回复达人的跟进备注（点击进入达人修改）</span>
+          </div>
+          <div id="repliesList"></div>
+        </section>
+      </section>
+
+      <!-- ============ View: Insights ============ -->
+      <section class="view" id="view-insights">
+        <div class="view-head">
+          <div>
+            <h1>AI 洞察</h1>
+            <p class="sub">基于你的达人数据自动生成的洞察。</p>
+          </div>
+        </div>
+        <div class="insights-list" id="insightsList"></div>
+      </section>
+
+      <!-- ============ View: Settings ============ -->
+      <section class="view" id="view-settings">
+        <div class="view-head">
+          <div>
+            <div style="display:flex;align-items:center;gap:10px">
+              <h1>设置</h1>
+              <span class="auto-save-badge" id="autoSaveBadge" title="所有设置会保存到本浏览器 localStorage，下次打开自动恢复">✓ 自动记忆</span>
+            </div>
+            <p class="sub">建联文案中使用的品牌与产品信息。<strong style="color:var(--text-2)">所有填入内容都会自动保存在本浏览器，刷新 / 重启都不丢。</strong></p>
+          </div>
+        </div>
+        <div class="settings-card card">
+          <div class="settings-form">
+            <div class="field">
+              <label>品牌名 <span class="field-note">（仅出现在签名，绝不出现在开头）</span></label>
+              <input type="text" id="setBrandName" placeholder="你的品牌">
+            </div>
+            <div class="field">
+              <label>商务邮箱</label>
+              <input type="text" id="setBrandEmail" placeholder="you@brand.com">
+            </div>
+            <div class="field-row">
+              <div class="field">
+                <label>产品名</label>
+                <input type="text" id="setProductName" placeholder="Home Security Camera">
+              </div>
+              <div class="field">
+                <label>价格（美元）</label>
+                <input type="number" id="setPrice" min="1">
+              </div>
+              <div class="field">
+                <label>佣金 %</label>
+                <input type="number" id="setCommission" min="0" max="100">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card card">
+          <div class="settings-form">
+            <div class="settings-section-title">
+              <h2>数据源 · OpenBoost</h2>
+              <span class="field-note">填入密钥后，输入任意 @handle 即可实时拉取真实达人数据（粉丝 / GMV / 销量 / 邮箱）。密钥只存在你自己的浏览器里。</span>
+            </div>
+            <div class="field">
+              <label>OpenBoost 密钥 <span class="field-note">（在 OpenBoost 开放平台后台获取）</span></label>
+              <div class="pwd-wrap">
+                <input type="password" id="setOpenBoostKey" class="pwd-input" placeholder="粘贴你的 OpenBoost 密钥" autocomplete="off">
+                <button type="button" class="pwd-toggle" data-target="setOpenBoostKey" aria-label="显示/隐藏密钥" title="显示/隐藏">
+                  <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <span class="pwd-saved-badge" id="obSavedBadge" style="display:none">✓ 已保存</span>
+              </div>
+            </div>
+            <div class="field">
+              <div class="ob-status" id="obStatus">
+                <span class="ob-dot"></span>
+                <span id="obStatusText">尚未配置密钥 — 当前使用内置示例数据</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-card card">
+          <div class="settings-form">
+            <div class="settings-section-title">
+              <h2>邮件发送（SMTP）</h2>
+              <span class="field-note">用于真正发送建联邮件。授权码只保存在你自己的浏览器里，后端不存储。</span>
+            </div>
+            <div class="field">
+              <label>邮箱服务商</label>
+              <select id="setSmtpProvider">
+                <option value="gmail">Gmail（smtp.gmail.com）</option>
+                <option value="qq">QQ 邮箱（smtp.qq.com）</option>
+                <option value="163">网易 163（smtp.163.com）</option>
+                <option value="outlook">Outlook（smtp.office365.com）</option>
+                <option value="custom">自定义</option>
+              </select>
+            </div>
+            <div class="field">
+              <label>发件邮箱</label>
+              <input type="text" id="setSmtpUser" placeholder="you@gmail.com">
+            </div>
+            <div class="field">
+              <label>授权码 / 应用密码 <span class="field-note">（不是登录密码，见服务商「应用专用密码」）</span></label>
+              <div class="pwd-wrap">
+                <input type="password" id="setSmtpPassword" class="pwd-input" placeholder="16 位授权码" autocomplete="off">
+                <button type="button" class="pwd-toggle" data-target="setSmtpPassword" aria-label="显示/隐藏授权码" title="显示/隐藏">
+                  <svg class="eye-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                </button>
+                <span class="pwd-saved-badge" id="smtpPwdSavedBadge" style="display:none">✓ 已保存</span>
+              </div>
+            </div>
+            <div class="field-row smtp-row">
+              <div class="field">
+                <label>SMTP 服务器</label>
+                <input type="text" id="setSmtpHost" placeholder="smtp.gmail.com">
+              </div>
+              <div class="field">
+                <label>端口</label>
+                <input type="number" id="setSmtpPort" placeholder="587">
+              </div>
+              <div class="field smtp-ssl">
+                <label>加密方式</label>
+                <select id="setSmtpSsl">
+                  <option value="starttls">STARTTLS（587）</option>
+                  <option value="ssl">SSL（465）</option>
+                </select>
+              </div>
+            </div>
+            <div class="settings-actions">
+              <button class="primary-btn" id="settingsSave">保存修改</button>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Batch Import Modal -->
+  <div class="modal-overlay" id="batchImportModal" style="display:none">
+    <div class="modal" style="max-width:560px">
+      <div class="modal-head">
+        <div>
+          <h2>批量导入达人</h2>
+          <p>粘贴一串 @handle 一次拉多个，节约重复操作时间</p>
+        </div>
+        <button class="modal-close" id="batchImportClose" title="关闭">×</button>
+      </div>
+
+      <div id="batchStepInput" class="batch-step">
+        <div class="batch-input-wrap">
+          <textarea id="batchImportTextarea" rows="6"
+            placeholder="每行一个，或用空格 / 逗号分隔&#10;例如&#10;khaby.lame&#10;mrbeast&#10;rafadealss"></textarea>
+          <div class="batch-input-meta">
+            <span>识别到 <strong id="batchImportCount">0</strong> 个 handle（最多 50 个）</span>
+          </div>
+        </div>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="batchImportCancel">取消</button>
+          <button class="primary-btn" id="batchImportGo">开始导入</button>
+        </div>
+      </div>
+
+      <div id="batchStepProgress" class="batch-step" style="display:none">
+        <div class="batch-progress">
+          <div class="batch-progress-head">
+            <span id="batchProgressText">准备中…</span>
+            <span id="batchProgressRatio">0 / 0</span>
+          </div>
+          <div class="batch-progress-bar">
+            <div class="batch-progress-fill" id="batchProgressFill"></div>
+          </div>
+          <div class="batch-progress-result" id="batchProgressResult"></div>
+        </div>
+      </div>
+
+      <div id="batchStepResult" class="batch-step" style="display:none">
+        <div class="batch-summary">
+          <div class="batch-summary-num">
+            <div class="num success" id="batchSummarySuccess">0</div>
+            <div class="lbl">成功入池</div>
+          </div>
+          <div class="batch-summary-num">
+            <div class="num failed" id="batchSummaryFailed">0</div>
+            <div class="lbl">未找到</div>
+          </div>
+        </div>
+        <div class="batch-failed-list" id="batchFailedList"></div>
+        <div class="modal-actions">
+          <button class="secondary-btn" id="batchResultRetry">重新导入未找到的</button>
+          <button class="primary-btn" id="batchResultDone">完成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Delete Confirm Modal -->
+  <div class="modal-overlay del-modal-overlay" id="deleteConfirmModal" style="display:none">
+    <div class="modal del-modal" role="dialog" aria-modal="true" aria-labelledby="delModalTitle">
+      <div class="del-modal-hero">
+        <div class="del-modal-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="3 6 5 6 21 6"></polyline>
+            <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path>
+            <path d="M10 11v6M14 11v6"></path>
+            <path d="M9 6V4a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2v2"></path>
+          </svg>
+        </div>
+        <h2 id="delModalTitle">确认移除达人？</h2>
+        <p>将从达人池、评分图、转化漏斗中移除</p>
+        <button class="del-modal-close" id="delModalClose" title="关闭" aria-label="关闭">×</button>
+      </div>
+      <div class="del-modal-body">
+        <div class="del-preview" id="delPreview"></div>
+        <div class="del-warn-note">
+          <span class="del-warn-icon">⚠</span>
+          <span>此操作不可撤销 — 但已记录的回复备注会归档保留，重新搜索 @handle 可再次拉取数据。</span>
+        </div>
+      </div>
+      <div class="modal-actions del-modal-actions">
+        <button class="secondary-btn" id="delModalCancel">取消</button>
+        <button class="btn-danger" id="delModalConfirm">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"></path></svg>
+          确认移除
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Analyzer Modal -->
+  <div class="modal-overlay" id="analyzerModal" style="display:none">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h2>AI 达人分析</h2>
+          <p>输入 TikTok @handle，自动分析粉丝 / GMV / 受众画像，并生成钩子式建联文案</p>
+        </div>
+        <button class="modal-close" id="analyzerClose" title="关闭">×</button>
+      </div>
+      <div class="analyzer-input-row">
+        <div class="analyzer-input">
+          <span class="at">@</span>
+          <input id="analyzerInput" placeholder="输入 handle，如 rafadealss" autocomplete="off">
+        </div>
+        <button class="primary-btn" id="analyzerRun">开始分析</button>
+      </div>
+      <div class="analyzer-hint" id="analyzerHint">
+        输入任意 TikTok @handle 实时拉取真实数据
+      </div>
+      <div class="analyzer-steps" id="analyzerSteps" style="display:none"></div>
+      <div class="analyzer-result" id="analyzerResult" style="display:none"></div>
+    </div>
+  </div>
+
+  <!-- Global Loading Overlay -->
+  <div class="loading-overlay" id="loadingOverlay" style="display:none">
+    <div class="loading-box">
+      <svg class="loading-spinner" width="40" height="40" viewBox="0 0 40 40">
+        <circle class="loading-track" cx="20" cy="20" r="16" fill="none" stroke-width="3.5"/>
+        <circle class="loading-active" cx="20" cy="20" r="16" fill="none" stroke-width="3.5" stroke-linecap="round"/>
+      </svg>
+      <div class="loading-text" id="loadingText">正在查询达人数据…</div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
