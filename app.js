@@ -44,6 +44,22 @@ const DEFAULT_CREATORS = [
     source: "openboost", products: 84, avgViews: 345, videos: 106
   },
   {
+    id: "soytucamaracontigo", name: "Camila Reyes", handle: "@soytucamaracontigo",
+    email: "camila.collab.soy@gmail.com",
+    fans: 84200, gmv: 31200, units: 980,
+    category: "Home & Electronics", male: 38.5, female: 61.5, gpm: 31.8,
+    region: "墨西哥", language: "es",
+    age: [
+      { label: "18-24", pct: 19 },
+      { label: "25-34", pct: 38 },
+      { label: "35-44", pct: 27 },
+      { label: "45+", pct: 16 }
+    ],
+    trend: { value: 12.6, up: true }, status: "new",
+    insight: "Creadora mexicana, 61.5% audiencia femenina, 38% entre 25-34. Producto encaja con su contenido de seguridad para el hogar — usar copy en español automático.",
+    source: "openboost", products: 42, avgViews: 1820, videos: 138
+  },
+  {
     id: "alexahome", name: "Alexa", handle: "@alexahome",
     email: "alexa.collabs@alexahome.com",
     fans: 28400, gmv: 18400, units: 920,
@@ -65,6 +81,7 @@ const AVATAR_COLORS = {
   rafadealss: "linear-gradient(135deg,#7c3aed,#a78bfa)",
   dodbao6666: "linear-gradient(135deg,#06b6d4,#22d3ee)",
   josiahfinds: "linear-gradient(135deg,#10b981,#34d399)",
+  soytucamaracontigo: "linear-gradient(135deg,#f43f5e,#fb7185)",
   alexahome: "linear-gradient(135deg,#f59e0b,#fbbf24)",
   techwithmike: "linear-gradient(135deg,#ef4444,#f87171)"
 };
@@ -87,6 +104,7 @@ const DEFAULT_STATE = {
   openboostKey: "",
   tone: "casual",
   channel: "email",
+  langOverride: "auto",       // "auto" / "en" / "es" —— 邮件语言
   edits: {},               // id -> { emailSubject, emailBody, dmBody }
   customCreators: [],      // 通过 @handle 分析新增的达人
   activeComposer: null,
@@ -753,13 +771,51 @@ function renderAnalyzerResult(c) {
 }
 
 // ---------- AI 文案生成（钩子式，开头不提品牌） ----------
-const TONES = {
+// 英文：原版（保持语气模型完全一致）
+const TONES_EN = {
   casual: { greet: (n) => `Hey ${n}! 👋`, close: `Reply "yes" and I'll get your sample out this week.` },
   direct: { greet: (n) => `Hi ${n},`, close: `If you're in, reply here and the sample ships this week.` },
-  warm: { greet: (n) => `Hey ${n},`, close: `Would love to work with you — reply and I'll get a sample on its way this week.` }
+  warm:   { greet: (n) => `Hey ${n},`, close: `Would love to work with you — reply and I'll get a sample on its way this week.` }
 };
 
-function hookLine(c, t) {
+// 西语版：母语开场 + 母语钩子 + 母语收口，给西语达人用
+const TONES_ES = {
+  casual: { greet: (n) => `¡Hola ${n}! 👋`, close: `Responde "sí" y te envío la muestra esta misma semana.` },
+  direct: { greet: (n) => `Hola ${n},`,    close: `Si te interesa, responde aquí y la muestra sale esta semana.` },
+  warm:   { greet: (n) => `Hola ${n},`,    close: `Me encantaría colaborar contigo — responde y te envío una muestra esta semana.` }
+};
+
+const TONES = TONES_EN; // 默认英文（按 lang 动态切换）
+
+// 语言元数据（徽章、UI 显示）
+const LANG_META = {
+  en: { label: "EN", name: "English" },
+  es: { label: "ES", name: "Español" }
+};
+
+// 实际使用的语言：尊重用户覆盖（auto/EN/ES），否则按达人的 language 字段
+function effectiveLang(c) {
+  const o = state.langOverride || "auto";
+  if (o !== "auto") return o;
+  return (c && c.language) || "en";
+}
+function toneFor(c) {
+  return effectiveLang(c) === "es" ? TONES_ES : TONES_EN;
+}
+
+function hookLine(c, t, lang) {
+  if (lang === "es") {
+    if (t.type === "power") {
+      return `Hiciste ${fmtNum(c.units)} unidades y ${fmtMoney(c.gmv)} GMV el mes pasado — ya sabes cómo mover producto. Te ofrecemos una más, con una comisión que de verdad paga.`;
+    }
+    if (t.type === "volume") {
+      return `Estás haciendo ${fmtNum(c.units)} unidades al mes en ${c.category.toLowerCase()} — eso es volumen serio.`;
+    }
+    if (t.type === "audience") {
+      return `Tu contenido de ${c.category.toLowerCase()} llega justo al público para el que esto está hecho — cerca del ${c.female}% de tu audiencia es mujer, y ese es el grupo que más compra cámaras de seguridad para el hogar.`;
+    }
+    return `Nos encanta tu contenido de ${c.category.toLowerCase()} — nuestro ${state.product.name.toLowerCase()} encaja perfecto con tu audiencia.`;
+  }
   if (t.type === "power") {
     return `You did ${fmtNum(c.units)} units and ${fmtMoney(c.gmv)} GMV last month — so you already know how to move product. Here's one more, at a commission that actually pays.`;
   }
@@ -772,33 +828,50 @@ function hookLine(c, t) {
   return `Love your ${c.category.toLowerCase()} content — our ${state.product.name.toLowerCase()} feels like a clean fit for your audience.`;
 }
 
-function offerLines(c, t) {
+function offerLines(c, t, lang) {
   const lines = [];
-  lines.push(`What's in it for you:`);
-  lines.push(`• FREE ${state.product.name} shipped to you (keep it, no cost)`);
-  lines.push(`• ${state.product.commission}% commission on every sale (~${commStr()} at $${state.product.price})`);
-  lines.push(`• Your own discount code for your audience`);
-  if (t.type === "volume") {
-    lines.push(`• A $${state.product.price} cam actually raises your per-sale earnings vs the lower-ticket items you usually run — same volume, bigger GMV`);
-  }
-  if (t.type === "audience") {
-    lines.push(`• At $${state.product.price} it's an easy impulse buy for the ${c.female}% female, family-safety crowd you already reach`);
+  if (lang === "es") {
+    lines.push("Qué hay para ti:");
+    lines.push(`• ${state.product.name} GRATIS enviado a ti (te lo quedas, sin costo)`);
+    lines.push(`• ${state.product.commission}% de comisión por cada venta (~${commStr()} a $${state.product.price})`);
+    lines.push("• Tu propio código de descuento para tu audiencia");
+    if (t.type === "volume") {
+      lines.push(`• Una cámara de $${state.product.price} sube tu ganancia por venta frente a los productos más baratos que sueles mover — mismo volumen, más GMV`);
+    }
+    if (t.type === "audience") {
+      lines.push(`• A $${state.product.price} es una compra fácil para el ${c.female}% de mujeres, público de seguridad familiar que ya alcanzas`);
+    }
+  } else {
+    lines.push(`What's in it for you:`);
+    lines.push(`• FREE ${state.product.name} shipped to you (keep it, no cost)`);
+    lines.push(`• ${state.product.commission}% commission on every sale (~${commStr()} at $${state.product.price})`);
+    lines.push(`• Your own discount code for your audience`);
+    if (t.type === "volume") {
+      lines.push(`• A $${state.product.price} cam actually raises your per-sale earnings vs the lower-ticket items you usually run — same volume, bigger GMV`);
+    }
+    if (t.type === "audience") {
+      lines.push(`• At $${state.product.price} it's an easy impulse buy for the ${c.female}% female, family-safety crowd you already reach`);
+    }
   }
   return lines.join("\n");
 }
 
 function buildEmail(c, tone) {
   const t = classify(c);
-  const T = TONES[tone] || TONES.casual;
-  const subject = `Free ${state.product.name} + ${state.product.commission}% — collab for ${c.name}`;
-  const brand = state.brand.name || "Your Brand";
+  const lang = effectiveLang(c);
+  const Tones = toneFor(c);
+  const T = Tones[tone] || Tones.casual;
+  const subject = lang === "es"
+    ? `Cámara de seguridad GRATIS + ${state.product.commission}% — colaboración con ${c.name}`
+    : `Free ${state.product.name} + ${state.product.commission}% — collab for ${c.name}`;
+  const brand = state.brand.name || (lang === "es" ? "Tu Marca" : "Your Brand");
   const email = state.brand.email || "you@brand.com";
   const body = [
     `${T.greet(c.name)}`,
     ``,
-    hookLine(c, t),
+    hookLine(c, t, lang),
     ``,
-    offerLines(c, t),
+    offerLines(c, t, lang),
     ``,
     T.close,
     ``,
@@ -810,26 +883,37 @@ function buildEmail(c, tone) {
 
 function buildDM(c, tone) {
   const t = classify(c);
-  const T = TONES[tone] || TONES.casual;
-  const dm = [
-    `${T.greet(c.name)} Love your ${c.category.toLowerCase()} content.`,
-    `Quick ask: we make a ${state.product.name.toLowerCase()} ($${state.product.price}) and we'd love to send you a FREE one + ${state.product.commission}% commission (~${commStr()} per sale).`,
-    `${hookLine(c, t)}`,
-    `Want the details? 😊`
-  ].join("\n");
+  const lang = effectiveLang(c);
+  const Tones = toneFor(c);
+  const T = Tones[tone] || Tones.casual;
+  const dm = lang === "es"
+    ? [
+        `${T.greet(c.name)} Nos encanta tu contenido de ${c.category.toLowerCase()}.`,
+        `Te escribo rápido: fabricamos una ${state.product.name.toLowerCase()} ($${state.product.price}) y queremos enviarte una GRATIS + ${state.product.commission}% de comisión (~${commStr()} por venta).`,
+        `${hookLine(c, t, lang)}`,
+        `¿Te paso los detalles? 😊`
+      ].join("\n")
+    : [
+        `${T.greet(c.name)} Love your ${c.category.toLowerCase()} content.`,
+        `Quick ask: we make a ${state.product.name.toLowerCase()} ($${state.product.price}) and we'd love to send you a FREE one + ${state.product.commission}% commission (~${commStr()} per sale).`,
+        `${hookLine(c, t, lang)}`,
+        `Want the details? 😊`
+      ].join("\n");
   return dm;
 }
 
 function buildWhatsApp(c, tone) {
   const t = classify(c);
-  const T = TONES[tone] || TONES.casual;
-  const brand = state.brand.name || "Your Brand";
+  const lang = effectiveLang(c);
+  const Tones = toneFor(c);
+  const T = Tones[tone] || Tones.casual;
+  const brand = state.brand.name || (lang === "es" ? "Tu Marca" : "Your Brand");
   const msg = [
     `${T.greet(c.name)}`,
     ``,
-    hookLine(c, t),
+    hookLine(c, t, lang),
     ``,
-    offerLines(c, t),
+    offerLines(c, t, lang),
     ``,
     T.close,
     ``,
@@ -904,7 +988,7 @@ function renderHomeTable(filterText = "") {
         <td>
           <div class="creator-cell">
             <div class="c-avatar" style="background:${AVATAR_COLORS[c.id]}">${c.name.charAt(0).toUpperCase()}</div>
-            <div><div class="c-name">${c.name}</div><div class="c-handle">${c.handle}</div></div>
+            <div><div class="c-name">${c.name} <span class="lang-pill ${effectiveLang(c)}" title="${LANG_META[effectiveLang(c)].name}${c.region ? ' · ' + c.region : ''}">${LANG_META[effectiveLang(c)].label}</span></div><div class="c-handle">${c.handle}</div></div>
           </div>
         </td>
         <td><span class="badge ${t.cls}">${t.label}</span></td>
@@ -978,7 +1062,10 @@ function renderPool() {
         <td>
           <div class="creator-cell">
             <div class="c-avatar" style="background:${AVATAR_COLORS[c.id]}">${c.name.charAt(0).toUpperCase()}</div>
-            <div><div class="c-name">${c.name}</div><div class="c-handle">${c.handle}</div></div>
+            <div>
+              <div class="c-name">${c.name} <span class="lang-pill ${effectiveLang(c)}" title="${LANG_META[effectiveLang(c)].name}${c.region ? ' · ' + c.region : ''}">${LANG_META[effectiveLang(c)].label}</span></div>
+              <div class="c-handle">${c.handle}</div>
+            </div>
           </div>
         </td>
         <td><span class="badge ${t.cls}">${t.label}</span></td>
@@ -1949,6 +2036,20 @@ function bindEvents() {
   });
   // sync tone buttons
   document.querySelectorAll("#toneSelect button").forEach((b) => b.classList.toggle("active", b.dataset.tone === state.tone));
+
+  // 邮件语言：auto / EN / ES。改了立刻重新生成当前达人文案
+  $("langSelect").addEventListener("click", (e) => {
+    const lang = e.target.dataset.lang;
+    if (!lang) return;
+    state.langOverride = lang;
+    document.querySelectorAll("#langSelect button").forEach((b) => b.classList.toggle("active", b === e.target));
+    saveState();
+    regenerateCurrent();
+    renderPool();   // 同步刷新达人池语言徽章
+    renderHomeTable();
+  });
+  // sync lang buttons
+  document.querySelectorAll("#langSelect button").forEach((b) => b.classList.toggle("active", b.dataset.lang === (state.langOverride || "auto")));
 
   // composer
   $("regeneratePitch").addEventListener("click", regenerateCurrent);

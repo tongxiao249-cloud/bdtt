@@ -36,6 +36,31 @@ if os.path.isfile(_ENV_PATH):
 
 OPENBOOST_API_KEY = os.environ.get("OPENBOOST_API_KEY", "")
 
+# ---------- 邮件语言推断 ----------
+# OpenBoost 返回的 region 字段是中英文混杂的国家/地区名。
+# 列表覆盖西语 21 国 + 关键英文别名（含 Latin/Hispanic 兜底）。
+_ES_REGIONS = (
+    "墨西哥", "西班牙", "阿根廷", "哥伦比亚", "智利", "秘鲁",
+    "委内瑞拉", "厄瓜多尔", "玻利维亚", "巴拉圭", "乌拉圭",
+    "哥斯达黎加", "巴拿马", "危地马拉", "洪都拉斯", "萨尔瓦多",
+    "尼加拉瓜", "多米尼加", "古巴", "波多黎各",
+    "Mexico", "Spain", "Argentina", "Colombia", "Chile", "Peru",
+    "Venezuela", "Ecuador", "Bolivia", "Paraguay", "Uruguay",
+    "Costa Rica", "Panama", "Guatemala", "Honduras", "El Salvador",
+    "Nicaragua", "Dominican", "Cuba", "Puerto Rico", "Latin", "Hispanic",
+)
+
+
+def _infer_language(region):
+    """根据地区字符串推断邮件语言。返回 'en' / 'es'，未知默认 'en'。"""
+    if not region:
+        return "en"
+    r = str(region).strip().lower()
+    for kw in _ES_REGIONS:
+        if kw.lower() in r:
+            return "es"
+    return "en"
+
 # ---------- OpenBoost 实时查询（MCP SSE 代理，零依赖） ----------
 # 认证方式：secret-key 请求头；传输：GET /sse 握手拿 sessionId，再 POST tools/call 同步查询。
 MCP_BASE = "https://mcp.microdata-inc.com"
@@ -193,6 +218,7 @@ def _map_creator(item):
         fans_delta = _num(item.get("fanslast30dqaq"))
     fans_delta = fans_delta or 0
 
+    region = (item.get("region") or item.get("countryRegion") or "").strip() or None
     return {
         "id": account or str(item.get("authorId") or ""),
         "openboostId": str(item.get("authorId") or ""),
@@ -214,6 +240,8 @@ def _map_creator(item):
         "creatorScore": _num(item.get("creatorScore")),
         "interactionRate": _num(item.get("interactionRate")),
         "trend": {"value": round(abs(fans_delta) * 100, 1), "up": fans_delta >= 0},
+        "region": region,
+        "language": _infer_language(region),
         "source": "openboost",
     }
 
@@ -304,6 +332,7 @@ OPENBOOST_CACHE = {
         "email": "rafacollabs03@gmail.com", "fans": 11100,
         "gmv": 43991, "units": 540, "gpm": 129,
         "category": "General", "source": "openboost",
+        "region": "美国", "language": "en",
         "products": 14, "avgViews": 1470, "videos": 86,
         "trend": {"value": 9.4, "up": False}
     },
@@ -312,6 +341,7 @@ OPENBOOST_CACHE = {
         "email": "josiahfinds@gmail.com", "fans": 6463,
         "gmv": 2643, "units": 391, "gpm": 88.4,
         "category": "Home & Electronics", "source": "openboost",
+        "region": "美国", "language": "en",
         "male": 21.6, "female": 68.0,
         "age": [
             {"label": "18-24", "pct": 22}, {"label": "25-34", "pct": 15},
@@ -325,6 +355,7 @@ OPENBOOST_CACHE = {
         "email": None, "fans": 21900,
         "gmv": 62347, "units": 5622, "gpm": 10.8,
         "category": "Phones & Electronics", "source": "openboost",
+        "region": "美国", "language": "en",
         "male": 71.2, "female": 15.0,
         "age": [
             {"label": "18-24", "pct": 12.9}, {"label": "25-34", "pct": 22.9},
@@ -333,6 +364,20 @@ OPENBOOST_CACHE = {
         ],
         "products": 79, "avgViews": 4338, "videos": 594,
         "trend": {"value": 200, "up": True}
+    },
+    "soytucamaracontigo": {
+        "id": "soytucamaracontigo", "name": "Camila Reyes", "handle": "@soytucamaracontigo",
+        "email": "camila.collab.soy@gmail.com", "fans": 84200,
+        "gmv": 31200, "units": 980, "gpm": 31.8,
+        "category": "Home & Electronics", "source": "openboost",
+        "region": "墨西哥", "language": "es",
+        "male": 38.5, "female": 61.5,
+        "age": [
+            {"label": "18-24", "pct": 19}, {"label": "25-34", "pct": 38},
+            {"label": "35-44", "pct": 27}, {"label": "45+", "pct": 16}
+        ],
+        "products": 42, "avgViews": 1820, "videos": 138,
+        "trend": {"value": 12.6, "up": True}
     },
 }
 
