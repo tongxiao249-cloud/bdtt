@@ -1462,6 +1462,11 @@ function regenerateCurrent() {
   if (!composerId) return;
   const c = getCreator(composerId);
   const edits = state.edits[composerId] || {};
+  // 豆包已填过的字段不要被规则模板覆盖（用户明确用 AI 写过）
+  if (edits.doubaoTouched) {
+    toast("已用豆包生成过 — 如要重新生成请先点清除", "warn", 3000);
+    return;
+  }
   if (composerChannel === "dm") {
     edits.dmBody = buildDM(c, state.tone);
     $("composerBody").value = edits.dmBody;
@@ -1880,6 +1885,193 @@ function toast(msg, type) {
   }, 2600);
 }
 
+// ============================================================
+// 豆包 AI 生成（粘贴工作流 · 0 成本）
+// ============================================================
+// 会员 ≠ API。豆包消费版不能用编程接口，所以走「我帮用户组装 prompt →
+// 用户去 doubao.com 粘贴 → 把豆包回复粘回来」的人工流程。
+// 体验 = 一键复制 + 一键解析填入，对用户就是「两秒手活」。
+
+function buildDoubaoPrompt(c) {
+  if (!c) return null;
+  const lang = effectiveLang(c);
+  const langName = { en: "English（英语）", es: "Spanish（西班牙语）" }[lang] || "English（英语）";
+  const regionNote = c.region ? `${c.region}（${langName}母语区）` : "未知地区";
+  const audience = (c.female != null || c.male != null)
+    ? `男 ${(c.male || 0).toFixed(1)}% / 女 ${(c.female || 0).toFixed(1)}%`
+    : "暂无受众画像";
+  const toneName = { casual: "轻松友好（像朋友介绍，不官腔）", direct: "直接简洁（一句话亮 offer）", warm: "温暖尊重（先夸再讲合作）" }[state.tone] || "轻松友好";
+  const channel = composerChannel;
+  const channelName = { email: "邮件（带主题行）", whatsapp: "WhatsApp 短消息（无主题行）", dm: "TikTok 私信（短促、有 emoji）" }[channel] || "邮件";
+  const product = state.product || {};
+  const brand = state.brand || {};
+  const brandName = brand.name || "我们的品牌";
+  const productName = product.name || "我们的产品";
+  const productPrice = (product.price != null) ? `$${product.price}` : "（未填）";
+  const commission = (product.commission != null) ? `${product.commission}%` : "（未填）";
+  const commUsd = (product.price != null && product.commission != null)
+    ? `约 $${(product.price * product.commission / 100).toFixed(2)}/单`
+    : "";
+
+  // 钩子建议（基于真实数据）
+  const hookHint = (() => {
+    if (c.gmv >= 30000 && c.units >= 500) return `钩子建议：强调"${(c.units||0).toLocaleString()} 件 / $${((c.gmv||0)/1000).toFixed(1)}K GMV"证明对方是带货老手，可以提出比低客单更高的报价。`;
+    if (c.units >= 800) return `钩子建议：强调"${(c.units||0).toLocaleString()} 件/月"的走量能力，可以提"同销量下高客单产品能多赚多少"。`;
+    if (c.female && c.female >= 50) return `钩子建议：强调"${c.female}% 女性受众"与产品目标用户重合（女性家庭安防买家）。`;
+    return `钩子建议：夸内容垂直度，引出"我们的产品与你的粉丝画像匹配"。`;
+  })();
+
+  return `你是 TikTok 达人 BD 合作邮件的资深写手，目标是帮我们写一封个性化合作邀请。请严格按下面的格式输出，不要加任何开场解释或"好的我来写"之类的话。
+
+# 达人数据（必须基于以下真实数据，不要捏造）
+- 名字：${c.name}
+- Handle：${c.handle || ""}
+- 类目：${c.category || "General"}
+- 近 30 天 GMV：$${(c.gmv || 0).toLocaleString()}
+- 近 30 天 销量：${(c.units || 0).toLocaleString()} 件
+- 粉丝数：${(c.fans || 0).toLocaleString()}
+- 受众性别：${audience}
+- 地区：${regionNote}
+
+# 我们的产品
+- 品牌：${brandName}
+- 产品：${productName}
+- 价格：${productPrice}
+- 佣金比例：${commission}${commUsd ? "（" + commUsd + "）" : ""}
+
+# 撰写要求
+- 通道：${channelName}
+- 语气：${toneName}
+- 输出语言：${langName}（必须用这种语言写，不要混英语）
+- 长度：${channel === "dm" ? "40-80 词（短）" : channel === "whatsapp" ? "60-100 词" : "80-130 词"}
+- 不要在开头提品牌名（先聊达人/数据建立对话）
+- 钩子要基于上面给定的真实数据，${hookHint}
+- Offer 三点要清晰：免费寄样 + 佣金比例 + 折扣码
+- 结尾要明确下一步（例：回复"yes"我本周寄样）
+- 不要承诺收益、不要承诺保底销量、不要捏造任何数字
+
+# 输出格式（严格遵守，空行分隔）
+Subject: <主题行，不超过 30 字>
+
+<正文，2-4 段，段落间空行>`;
+}
+
+// 复制提示词 + 打开豆包网页
+function doubaoCopyAndGo() {
+  const c = getCreator(composerId);
+  if (!c) { toast("请先在左侧选中达人", "warn"); return; }
+  const prompt = buildDoubaoPrompt(c);
+  if (!prompt) return;
+  copyText(prompt, null);
+  const win = window.open("https://www.doubao.com/chat/", "_blank", "noopener,noreferrer");
+  if (!win) {
+    toast("已复制提示词 — 浏览器拦截了新标签，请手动打开 doubao.com", "warn", 4500);
+  } else {
+    toast(`已复制 ${c.name} 的提示词 — 去豆包粘贴并发送`, "success", 3500);
+  }
+  hideDoubaoMenu();
+}
+
+// 打开/关闭粘贴 modal
+function openDoubaoPaste() {
+  hideDoubaoMenu();
+  const ta = $("doubaoPasteText");
+  ta.value = "";
+  $("doubaoPasteHint").textContent = "等待粘贴…";
+  $("doubaoPasteHint").className = "doubao-paste-hint";
+  $("doubaoPasteModal").style.display = "flex";
+  setTimeout(() => ta.focus(), 50);
+}
+function closeDoubaoPaste() {
+  $("doubaoPasteModal").style.display = "none";
+}
+
+// 解析豆包回复：抽取 subject + body
+function parseDoubaoResponse(raw) {
+  if (!raw) return { subject: "", body: "", ok: false, reason: "empty" };
+  let text = raw.trim();
+  // 去掉 markdown 代码块围栏
+  text = text.replace(/^```[a-z]*\n?/i, "").replace(/\n?```\s*$/i, "").trim();
+  // 常见前缀整段去掉
+  text = text.replace(/^((好的[，,:.、\s].{0,80}?)|(Sure[，,:.\s].{0,80}?)|(Aquí tienes[，,:.\s].{0,80}?)|(Aquí está[，,:.\s].{0,80}?))\n+/i, "").trim();
+
+  let subject = "", body = text;
+  const subjMatch = text.match(/^[ \t]*(?:Subject|主题|Asunto|主题：|Subject：)\s*[:：]?\s*(.+?)\s*$/im);
+  if (subjMatch) {
+    subject = subjMatch[1].trim();
+    body = text.replace(subjMatch[0], "").trim();
+  } else {
+    const lines = text.split("\n");
+    const firstNonEmpty = lines.findIndex((l) => l.trim());
+    if (firstNonEmpty >= 0) {
+      subject = lines[firstNonEmpty].trim();
+      body = lines.slice(firstNonEmpty + 1).join("\n").trim();
+    }
+  }
+  body = body.replace(/^\n+|\n+$/g, "");
+  const ok = !!(subject || body);
+  return { subject, body, ok, reason: ok ? "ok" : "empty" };
+}
+
+// 把解析结果应用到当前 composer
+function applyDoubaoResponse() {
+  const c = getCreator(composerId);
+  if (!c) { toast("请先在左侧选中达人", "warn"); return; }
+  const raw = $("doubaoPasteText").value;
+  if (!raw.trim()) { toast("粘贴内容为空", "warn"); return; }
+  const { subject, body, ok } = parseDoubaoResponse(raw);
+  if (!ok) { toast("无法解析，请检查粘贴内容", "error"); return; }
+
+  if (composerChannel === "email") {
+    if (subject) $("composerSubject").value = subject;
+    if (body) $("composerBody").value = body;
+  } else {
+    const merged = (subject ? subject + "\n\n" : "") + body;
+    $("composerBody").value = merged;
+  }
+
+  if (!state.edits[c.id]) state.edits[c.id] = {};
+  if (composerChannel === "email") {
+    state.edits[c.id].emailSubject = subject;
+    state.edits[c.id].emailBody = body;
+  } else if (composerChannel === "whatsapp") {
+    state.edits[c.id].waBody = $("composerBody").value;
+  } else {
+    state.edits[c.id].dmBody = $("composerBody").value;
+  }
+  state.edits[c.id].doubaoTouched = true;
+  saveState();
+
+  closeDoubaoPaste();
+  toast(`已填入 ${c.name} 的${composerChannel === "email" ? "邮件" : composerChannel === "whatsapp" ? "WhatsApp 消息" : "私信"} — 可继续编辑`, "success", 3000);
+}
+
+// 实时显示解析状态
+function updateDoubaoPasteHint() {
+  const raw = $("doubaoPasteText").value;
+  if (!raw.trim()) {
+    $("doubaoPasteHint").textContent = "等待粘贴…";
+    $("doubaoPasteHint").className = "doubao-paste-hint";
+    return;
+  }
+  const { subject, body, ok } = parseDoubaoResponse(raw);
+  if (ok) {
+    $("doubaoPasteHint").textContent = `✓ 已识别：主题「${subject || "(无)"}」+ 正文 ${body.length} 字`;
+    $("doubaoPasteHint").className = "doubao-paste-hint ok";
+  } else {
+    $("doubaoPasteHint").textContent = "未识别到主题/正文，请检查粘贴";
+    $("doubaoPasteHint").className = "doubao-paste-hint warn";
+  }
+}
+
+// 下拉菜单控制
+function showDoubaoMenu() { $("doubaoMenu").style.display = "block"; }
+function hideDoubaoMenu() { $("doubaoMenu").style.display = "none"; }
+function toggleDoubaoMenu() {
+  const m = $("doubaoMenu");
+  m.style.display = (m.style.display === "none" || !m.style.display) ? "block" : "none";
+}
+
 // 复制文本到剪贴板：优先现代 API，失败回退 execCommand（iframe 预览面板里更稳）
 function copyText(text, okMsg) {
   const done = () => toast(okMsg || "已复制到剪贴板", "success");
@@ -2036,6 +2228,27 @@ function bindEvents() {
   });
   // sync tone buttons
   document.querySelectorAll("#toneSelect button").forEach((b) => b.classList.toggle("active", b.dataset.tone === state.tone));
+
+  // 豆包下拉
+  $("doubaoToggle").addEventListener("click", (e) => {
+    e.stopPropagation();
+    toggleDoubaoMenu();
+  });
+  document.addEventListener("click", (e) => {
+    const wrap = $("doubaoMenu");
+    if (wrap && wrap.style.display === "block" && !e.target.closest(".doubao-wrap")) hideDoubaoMenu();
+  });
+  $("doubaoMenu").addEventListener("click", (e) => {
+    const item = e.target.closest("[data-doubao-action]");
+    if (!item) return;
+    if (item.dataset.doubaoAction === "copyAndGo") doubaoCopyAndGo();
+    else if (item.dataset.doubaoAction === "paste") openDoubaoPaste();
+  });
+  // 粘贴 modal 事件
+  $("doubaoPasteClose").addEventListener("click", closeDoubaoPaste);
+  $("doubaoPasteCancel").addEventListener("click", closeDoubaoPaste);
+  $("doubaoPasteApply").addEventListener("click", applyDoubaoResponse);
+  $("doubaoPasteText").addEventListener("input", updateDoubaoPasteHint);
 
   // 邮件语言：auto / EN / ES。改了立刻重新生成当前达人文案
   $("langSelect").addEventListener("click", (e) => {
